@@ -1,0 +1,889 @@
+# Site Structure & Content Specification for "My Blog Desk"
+
+**Repository:** `blog-evd`  
+**Site Identity:** DeepaRam — Painting Emotions in Stillness  
+**Target User:** Non-technical mobile companion app ("My Blog Desk") publishing content via GitHub Contents API commits triggering Vercel auto-deploys.  
+**Report Date:** November 2026  
+
+---
+
+> [!CAUTION]
+> ### CRITICAL ARCHITECTURAL FINDING
+> **The entire repository currently hardcodes 100% of its content directly inside TypeScript React component files (`.tsx`)**.
+> 
+> There is **no `content/` directory**, **no Markdown/MDX parser**, **no frontmatter extractor (`gray-matter`)**, **no CMS**, and **no JSON data loader**.
+> 
+> If a companion app commits a Markdown, MDX, or JSON content file to this repository today, **Next.js will not read it, parse it, or display it**. For the "My Blog Desk" model (committing content files only without touching code) to function, a **content loader abstraction** (reading from local JSON or Markdown files via `fs` or a parser) must be introduced into the site code, or the companion app must be aware of the exact `.tsx` data structures.
+> 
+> Full details and transition specifications are documented in **Section 3**, **Section 6**, and **Section 7**.
+
+---
+
+## 1. Tech Stack & Project Tree
+
+### 1.1 Technology Stack & Dependencies
+
+* **Framework:** Next.js `16.2.6` (configured with Turbopack for builds, React `19.2.4`, React DOM `19.2.4`)
+* **Router Type:** Next.js **App Router** (`src/app/`)
+* **Component Paradigm:** Almost all pages and leaf routes are Client Components marked with `"use client"` at line 1, utilizing React hooks (`useEffect`, `useState`, `useParams`, `usePathname`).
+* **Styling Engine:** Tailwind CSS `v4` (`tailwindcss: ^4`, `@tailwindcss/postcss: ^4`, `postcss: ^8.5.10`)
+  * Global design tokens defined via `@theme inline` in [src/app/globals.css](file:///d:/Profiles/blog-evd/src/app/globals.css).
+  * Brand palette:
+    * `--color-background`: `#F3EDE4` (Warm canvas / soft beige)
+    * `--color-foreground`: `#1D1D1D` (Charcoal)
+    * `--color-sage`: `#A8B5A1`
+    * `--color-dusty-rose`: `#D8B4A8`
+    * `--color-misty-blue`: `#A6B6C8`
+    * `--color-warm-taupe`: `#8E7D6B`
+    * `--color-charcoal`: `#1D1D1D`
+    * `--color-soft-beige`: `#F3EDE4`
+* **Typography:** Managed via `next/font/google` in [src/app/layout.tsx](file:///d:/Profiles/blog-evd/src/app/layout.tsx):
+  * `Lora` (`--font-lora` / `--font-serif`) — Used for all body text, headings, and reflections.
+  * `Alex_Brush` (`--font-alex-brush` / `--font-alex`) — Used for calligraphy signatures, grand hero titles, and decorative accents.
+* **Analytics:** `@vercel/analytics/next` (`^2.0.1`) mounted in `RootLayout`.
+* **TypeScript & Linting:** TypeScript `5`, strict mode enabled in `tsconfig.json`, ESLint `9` with `eslint-config-next: 16.2.3`.
+* **Content Libraries:** **None.** (No `gray-matter`, no `@next/mdx`, no `next-mdx-remote`, no `contentlayer`, no `zod`).
+
+---
+
+### 1.2 Complete File & Folder Tree
+
+```text
+blog-evd/
+├── .gitignore
+├── AGENTS.md
+├── CLAUDE.md
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── README.md
+├── tsconfig.json
+├── tsconfig.tsbuildinfo
+├── public/
+│   ├── birthdayletter.jpeg
+│   ├── chatgpt.png
+│   ├── FB_IMG_1558854274277.jpg
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── im4.png                     # Primary site logo (dark charcoal)
+│   ├── image3.png                  # Secondary site logo (light/gold for dark poem view)
+│   ├── kaartu.jpeg
+│   ├── landscape.png
+│   ├── landscape_orig.png
+│   ├── mataji.jpeg
+│   ├── next.svg
+│   ├── portrait.png
+│   ├── portrait_orig.png
+│   ├── steelcont.jpeg
+│   ├── vercel.svg
+│   ├── WA_1786207878858.jpg.jpeg
+│   ├── window.svg
+│   └── gallery/
+│       ├── applefork.jpeg
+│       ├── beach.jpeg
+│       ├── buddha.jpeg
+│       ├── butterfly-blue.jpeg
+│       ├── butterfly-yellow.jpeg
+│       ├── canvas-1.jpeg
+│       ├── eye-1.jpeg
+│       ├── eye-2.jpeg
+│       ├── face-portrait.jpeg
+│       ├── fish.jpeg
+│       ├── fishesonpond.jpeg
+│       ├── flower.jpeg
+│       ├── glass.jpeg
+│       ├── glassofwater.jpeg
+│       ├── guruvaryoorpan.jpeg
+│       ├── kathakali-1.jpeg
+│       ├── kathakali-2.jpeg
+│       ├── kathakali-3.jpeg
+│       ├── krishna.jpeg
+│       ├── lips.jpeg
+│       ├── lka-1.jpeg              # Lalit Kala Akademi exhibition feature 1
+│       ├── lka-2.jpeg              # Lalit Kala Akademi exhibition feature 2
+│       ├── lka-3.jpeg              # Lalit Kala Akademi exhibition feature 3
+│       ├── lka-4.jpeg              # Lalit Kala Akademi exhibition feature 4
+│       ├── peonyflower.jpeg
+│       ├── pouringwater.jpeg
+│       ├── radhekrishna.jpeg
+│       ├── rose.jpeg
+│       ├── shivaparvati.jpeg
+│       ├── swan.jpeg
+│       └── woman.jpeg
+└── src/
+    └── app/
+        ├── components.tsx          # Header, Footer, NavLink, Navigation state
+        ├── favicon.ico
+        ├── globals.css             # Tailwind v4 theme, animations, scrollbar styles
+        ├── layout.tsx              # Root HTML layout, font injection, analytics
+        ├── page.tsx                # Homepage (Hero, Journey, Art, Series, Quote, Soul Notes, Musings)
+        ├── art/
+        │   └── page.tsx            # Art gallery (Acrylic, Pencil, Lalit Kala exhibition)
+        ├── musings/
+        │   ├── page.tsx            # Musings directory + Heartlines collection banner
+        │   ├── [slug]/
+        │   │   └── page.tsx        # Individual Musing reader
+        │   └── heartlines/
+        │       ├── page.tsx        # Heartlines poetry collection directory
+        │       └── [slug]/
+        │           └── page.tsx    # Individual Poem reader (supports 3 view modes)
+        ├── series/
+        │   ├── page.tsx            # Series list directory
+        │   └── [slug]/
+        │       ├── page.tsx        # Chapter index for a selected series
+        │       └── [chapterSlug]/
+        │           └── page.tsx    # Chapter reading page with prev/next navigation
+        └── soul-notes/
+            ├── page.tsx            # Soul Notes directory
+            └── [slug]/
+                └── page.tsx        # Individual Soul Note reader
+```
+
+---
+
+## 2. Complete Site Map, Sections, Categories & Connection Points
+
+### 2.1 Complete Route Catalog
+
+| URL Route | File Path | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `/` | `src/app/page.tsx` | Static Page (Client) | Homepage containing Hero, Journey (About), Art preview, Series preview, Quote, Soul Notes preview, Musings preview, and Heartlines preview. |
+| `/series` | `src/app/series/page.tsx` | Directory Page | Lists all long-form episodic stories/series. |
+| `/series/[slug]` | `src/app/series/[slug]/page.tsx` | Chapter Index | Shows the title, overview, and sequential chapter list of a specific series. |
+| `/series/[slug]/[chapterSlug]` | `src/app/series/[slug]/[chapterSlug]/page.tsx` | Reader Page | Reads a single chapter with sequential Prev/Next chapter navigation, inline illustrations, and optional gratitude dedication. |
+| `/soul-notes` | `src/app/soul-notes/page.tsx` | Directory Page | Lists reflective essays and spiritual prose ("Whispers of the Heart"). |
+| `/soul-notes/[slug]` | `src/app/soul-notes/[slug]/page.tsx` | Reader Page | Reads an individual reflective essay with paragraph formatting, dialogues, and inline images. |
+| `/musings` | `src/app/musings/page.tsx` | Directory Page | Lists observational life prose ("Wandering Thoughts") and highlights the **Heartlines** poetry sub-collection. |
+| `/musings/[slug]` | `src/app/musings/[slug]/page.tsx` | Reader Page | Reads an individual observational musing. |
+| `/musings/heartlines` | `src/app/musings/heartlines/page.tsx` | Sub-Collection Directory | Dedicated poetry collection page ("Moments in Verse") displaying poem preview cards. |
+| `/musings/heartlines/[slug]` | `src/app/musings/heartlines/[slug]/page.tsx` | Reader Page | Reads a poem. Supports three distinct presentation layouts (text-only, artwork poster with lightbox, or full-bleed ambient wallpaper). |
+| `/art` | `src/app/art/page.tsx` | Gallery Page | Complete visual portfolio: Exhibition Accordion (Lalit Kala Akademi), Acrylic on Canvas masonry grid, and Pencil Art masonry grid. |
+
+---
+
+### 2.2 Connection Points & Data Flow
+
+#### A. Top & Mobile Navigation Bar (`src/app/components.tsx`)
+The `Header` component is mounted globally in `RootLayout`. It provides desktop navigation links and an animated full-screen mobile menu.
+* **Branding:**
+  * Clicking the logo or `DeepaRam` title links to `/`.
+  * Dynamic Theme Switch: If `pathname === "/musings/heartlines/feeling-rooted"`, the header dynamically flips to a dark-mode palette (`logoSrc = "/image3.png"`, golden text `#E1BB5E`, white burger icon).
+* **Navigation Links:**
+  1. `Home` → `/`
+  2. `About Me` → `/#journey` (Smooth scroll to Journey section on homepage)
+  3. `Series` → `/series`
+  4. `Soul Notes` → `/soul-notes`
+  5. `Musings` → `/musings`
+  6. `Art` → `/art`
+  7. `Contact` → `#contact` (Smooth scroll to footer community & contact section)
+* **Call to Action Button:**
+  * `Subscribe` → `#contact`
+
+#### B. Footer Connection Points (`src/app/components.tsx`)
+* **Community Invite:** WhatsApp Community link (`https://chat.whatsapp.com/J7WPIWyNN5v8AfB87D5miy`).
+* **Explore Directory:** Links to `/`, `/#journey`, `/series`, `/soul-notes`, `/musings`, `/art`.
+* **Connect:** Email link (`mailto:evdeepa.6@gmail.com`).
+
+#### C. Home Page Aggregation & Connection Points (`src/app/page.tsx`)
+The homepage aggregates summaries from every content section. **However, it does not fetch them from a shared database or file folder; it maintains duplicated hardcoded arrays inside `src/app/page.tsx`**:
+1. **Hero Section (`HeroSection`):** Displays dynamic animated petals, starry sky, glowing SVG crescent moon, and category keyword pills: `Nature ✦ Art ✦ Words ✦ Silence ✦ Soul`.
+2. **Journey Section (`JourneySection`):** Bio of DeepaRam and anchor CTA to `#journal`.
+3. **Art Preview (`ArtSection`):**
+   * Displays 4 hardcoded featured artworks: `/gallery/canvas-1.jpeg`, `/gallery/face-portrait.jpeg`, `/gallery/kathakali-1.jpeg`, `/gallery/swan.jpeg`.
+   * CTA: "Explore Gallery" → links to `/art`.
+4. **Series Preview (`SeriesSection`):**
+   * Renders items from `const previewSeries = [...]` (currently: "A Journey of Hope and Heart").
+   * Each card links to `/series/${story.slug}`.
+   * CTA: "Read the Series" → links to `/series`.
+5. **Soul Notes Preview (`JournalSection`):**
+   * Renders items from `const posts = [...]` (currently: "A Reflection on the Paths We Take", "When Silence Spoke Love").
+   * Each card links to `/soul-notes/${post.slug}`.
+   * CTA: "Explore Entries" → links to `/soul-notes`.
+6. **Musings & Heartlines Preview (`MusingsSection`):**
+   * Renders observational essays from `const musings = [...]` linking to `/musings/${musing.slug}`.
+   * Features a sub-divider: "Heartlines Poetry".
+   * Renders poetry cards from `const previewPoems = [...]` (currently: "In the Quiet Corners of Your World", "Feeling Rooted", "A Gentle Return to Self", "The Invisible Touch of Divinity"), each linking to `/musings/heartlines/${poem.slug}`.
+   * CTA: "Read the Collection" → links to `/musings`.
+
+#### D. Detail & Cross-Linking Architecture
+* **Series Navigation Chain:**  
+  `/series` (List) → `/series/[slug]` (Chapter overview) → `/series/[slug]/[chapterSlug]` (Chapter reader).  
+  *Inside the chapter reader*, previous and next chapter buttons are hardcoded for `prologue`, `chapter-1` through `chapter-12`, and `epilogue`.
+* **Musings to Heartlines Sub-Collection:**  
+  The top of `/musings` features a prominent card linking directly to `/musings/heartlines`.
+* **Inter-Post Hyperlinks:**  
+  The content parser in `/soul-notes/[slug]` explicitly parses Markdown links (`[text](url)`). For example:
+  * `/soul-notes/the-departure-of-a-soul` links inline to `/soul-notes/when-silence-spoke-love`.
+  * `/soul-notes/when-silence-spoke-love` links inline to `/soul-notes/the-departure-of-a-soul`.
+
+---
+
+## 3. Content Storage & Exact Schema (Per Section)
+
+Because content is hardcoded across separate component files, adding a post currently requires updating multiple files simultaneously. The following tables document the exact schemas expected by each component.
+
+---
+
+### 3.1 Soul Notes
+
+* **Storage Type:** Hardcoded TypeScript objects.
+* **Component Locations:**
+  1. Directory List: [src/app/soul-notes/page.tsx](file:///d:/Profiles/blog-evd/src/app/soul-notes/page.tsx) (`notes` array)
+  2. Reader View: [src/app/soul-notes/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/soul-notes/[slug]/page.tsx) (`notesData` dictionary)
+  3. Homepage Preview: [src/app/page.tsx](file:///d:/Profiles/blog-evd/src/app/page.tsx) (`posts` array)
+* **Ordering Rule:** Static array index order (first item in array renders first).
+* **Draft Support:** **None**.
+* **Index/Manifest Files:** To add a note, 2 files (3 if showing on home) must be edited in tandem.
+
+#### Schema Table: Soul Note (List & Homepage)
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Yes** | `"A Reflection on the Paths We Take"` | Full article title. |
+| `slug` | `string` | **Yes** | `"a-reflection-on-the-paths-we-take"` | URL identifier. Must be lowercase hyphenated. |
+| `date` | `string` | **Yes** | `"October 27, 2026"` | Formatted as `MMMM D, YYYY` (or `D MMM, YYYY`). |
+| `category` | `string` | **Yes** | `"Soul"` | Category tag. |
+| `readTime` | `string` | **Yes** | `"3 min read"` | Estimated reading time. |
+| `snippet` / `excerpt` | `string` | **Yes** | `"Observing different journeys..."` | Summary paragraph shown on cards. (Named `snippet` in `soul-notes/page.tsx`, `excerpt` in `page.tsx`). |
+| `categoryColor` | `string` | No (Home only) | `"#CFA989"` | Used only in `src/app/page.tsx` for visual color chips. |
+| `tag` | `string` | No (Home only) | `"🌿"` | Emoji icon used only in `src/app/page.tsx`. |
+
+#### Schema Table: Soul Note (Full Detail Reader)
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Yes** | `"The Mother’s Silent Answer"` | Note title. |
+| `date` | `string` | **Yes** | `"October 18, 2025"` | Publication date string. |
+| `category` | `string` | **Yes** | `"Soul"` | Category tag. |
+| `readTime` | `string` | **Yes** | `"3 min read"` | Read duration. |
+| `content` | `string[]` | **Yes** | `["Paragraph 1...", "Paragraph 2..."]` | Array of individual string paragraphs. Supports `[IMAGE:<filename>]`, markdown links `[Label](/path)`, and dialogue styling. |
+
+---
+
+### 3.2 Musings
+
+* **Storage Type:** Hardcoded TypeScript objects.
+* **Component Locations:**
+  1. Directory List: [src/app/musings/page.tsx](file:///d:/Profiles/blog-evd/src/app/musings/page.tsx) (`musings` array)
+  2. Reader View: [src/app/musings/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/musings/[slug]/page.tsx) (`musingsData` dictionary)
+  3. Homepage Preview: [src/app/page.tsx](file:///d:/Profiles/blog-evd/src/app/page.tsx) (`musings` array)
+* **Ordering Rule:** Static array index order.
+* **Draft Support:** **None**.
+* **Index/Manifest Files:** Both list and reader files must be updated.
+
+#### Schema Table: Musing Entry
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Yes** | `"Kaartu"` | Title of the musing. |
+| `slug` | `string` | **Yes** | `"kaartu"` | Lowercase hyphenated URL slug. |
+| `date` | `string` | **Yes** | `"12 Feb, 2026"` | Publication date. |
+| `category` | `string` | **Yes** | `"Life"` | Category badge. |
+| `readTime` | `string` | **Yes** | `"4 min read"` | Read time indicator. |
+| `snippet` / `excerpt` | `string` | **Yes** | `"The first thought that rose in me..."` | Card teaser text. |
+| `content` | `string[]` | **Yes** (in detail) | `["Line 1", "Line 2..."]` | Array of paragraphs. Supports `[IMAGE:<filename>]`. |
+| `tag` | `string` | No (Home only) | `"🐾"` | Emoji tag for homepage card. |
+
+---
+
+### 3.3 Heartlines (Poetry Sub-Collection)
+
+* **Storage Type:** Hardcoded TypeScript objects.
+* **Component Locations:**
+  1. Directory List: [src/app/musings/heartlines/page.tsx](file:///d:/Profiles/blog-evd/src/app/musings/heartlines/page.tsx) (`poems` array)
+  2. Reader View: [src/app/musings/heartlines/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/musings/heartlines/[slug]/page.tsx) (`poems` dictionary in `getPoemBySlug`)
+  3. Homepage Preview: [src/app/page.tsx](file:///d:/Profiles/blog-evd/src/app/page.tsx) (`previewPoems` array)
+* **Ordering Rule:** Static array order (latest poem placed at index 0).
+* **Draft Support:** **None**.
+
+#### Schema Table: Heartlines Poem Entry
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Yes** | `"In the Quiet Corners of Your World"` | Poem title. |
+| `slug` | `string` | **Yes** | `"in-the-quiet-corners-of-your-world"` | URL slug. |
+| `date` | `string` | **Yes** | `"November 18, 2026"` | Date string (`MMMM D, YYYY`). |
+| `snippet` | `string` | **Yes** (List) | `"She wished to walk beside you,\n..."` | Stanza preview shown on cards. Newlines supported. |
+| `content` | `string` | **Yes** (Detail) | `"She wished to walk beside you,\nif only..."` | Full poem string where `\n` represents line breaks and `\n\n` represents stanza breaks. |
+| `image` | `string` | Optional | `"/chatgpt.png"` | If provided without backgrounds, triggers **Visual Poster Layout** with zoom lightbox. |
+| `landscapeBg` | `string` | Optional | `"/landscape.png"` | Triggers **Wallpaper Layout** for desktop viewport. |
+| `portraitBg` | `string` | Optional | `"/portrait.png"` | Triggers **Wallpaper Layout** for mobile viewport. |
+
+---
+
+### 3.4 Series & Chapters
+
+* **Storage Type:** Hardcoded TypeScript objects.
+* **Component Locations:**
+  1. Series List: [src/app/series/page.tsx](file:///d:/Profiles/blog-evd/src/app/series/page.tsx) (`seriesList` array)
+  2. Chapter Index: [src/app/series/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/series/[slug]/page.tsx) (`seriesDB` object)
+  3. Chapter Reader: [src/app/series/[slug]/[chapterSlug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/series/[slug]/[chapterSlug]/page.tsx) (`data` object in `getChapterData`, 1,780+ lines)
+  4. Homepage Preview: [src/app/page.tsx](file:///d:/Profiles/blog-evd/src/app/page.tsx) (`previewSeries` array)
+* **Ordering Rule:** Static array order inside `seriesDB[slug].chapters`.
+
+#### Schema Table: Series Root (`seriesList` & `seriesDB`)
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Yes** | `"A Journey of Hope and Heart"` | Series title. |
+| `slug` | `string` | **Yes** | `"a-journey-of-hope-and-heart"` | Series slug. |
+| `date` | `string` | **Yes** | `"May 18, 2026"` | Series launch date. |
+| `category` | `string` | **Yes** | `"Story"` | Category label. |
+| `snippet` / `description` | `string` | **Yes** | `"A story of unfolding chapters..."` | Series synopsis. |
+| `chapters` | `Array<ChapterMeta>` | **Yes** (Index) | `[{ title: "Prologue", ... }]` | List of chapter descriptors. |
+
+#### Schema Table: Chapter Entry (`ChapterMeta` & Full Reader)
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Yes** | `"When Destiny Chose The Hour"` | Chapter title. |
+| `slug` | `string` | **Yes** | `"chapter-1"` (or `"prologue"`, `"epilogue"`) | Chapter URL slug. |
+| `chapterLabel` | `string` | Optional | `"Chapter 1"`, `"Prologue"`, `"Epilogue"` | Header label badge. If omitted, title acts as primary header. |
+| `date` | `string` | **Yes** | `"May 19, 2026"` | Publication date string. |
+| `readTime` | `string` | **Yes** | `"3 min read"` | Read duration. |
+| `snippet` | `string` | **Yes** (in list) | `"We began our journey together..."` | Summary teaser. |
+| `content` | `string` | **Yes** (in reader) | Multi-line template string | Full text with `\n\n` paragraph separation. Supports `[IMAGE:<file>]`, `[CENTER]`, `**bold**`, `*italic*`. |
+| `gratitude` | `object` | Optional | `{ title: "...", items: [...] }` | Heartfelt dedication at the end of a chapter. |
+| `gratitude.title` | `string` | If gratitude present | `"Gratefully Remembered"` | Dedication heading. |
+| `gratitude.subtitle` | `string` | If gratitude present | `"With heartfelt gratitude to:"` | Dedication subheading. |
+| `gratitude.items` | `Array<{name, role}>` | If gratitude present | `[{ name: "Dr. ...", role: "..." }]` | List of people acknowledged. |
+
+---
+
+### 3.5 Art & Gallery
+
+* **Storage Type:** Hardcoded TypeScript arrays in [src/app/art/page.tsx](file:///d:/Profiles/blog-evd/src/app/art/page.tsx).
+* **Ordering Rule:** Static array order.
+
+#### Schema Table: Gallery Artwork Entry
+| Field | Type | Required? | Example | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `src` | `string[]` | **Yes** | `["/gallery/canvas-1.jpeg"]` | **Array of image path strings**. If array has 1 image, renders full-width. If array has 2+ images (e.g. eyes or butterflies), renders as a multi-image side-by-side card. |
+| `caption` | `string` | **Yes** | `"My first acrylic painting - Lakeside in Bloom"` | Caption displayed below the artwork. |
+
+---
+
+## 4. Images & Media Rules (Per Section)
+
+### 4.1 Asset Storage Locations
+* All image assets live in the Next.js `public/` directory:
+  * General Illustrations & Backgrounds: `public/` (e.g. `public/kaartu.jpeg`, `public/landscape.png`)
+  * Art Gallery Assets: `public/gallery/` (e.g. `public/gallery/canvas-1.jpeg`)
+
+### 4.2 Path & URL Reference Formats
+* **When referenced in Next.js `<Image src="..." />` props or array objects:**
+  * Must begin with a leading forward slash: `"/gallery/swan.jpeg"`, `"/kaartu.jpeg"`, `"/portrait.png"`.
+* **When referenced inside inline `[IMAGE:...]` tags in text content:**
+  * The code uses: `src.replace("[IMAGE:", "").replace("]", "")` and renders `<Image src={`/${src}`} ... />`.
+  * Therefore, **do NOT include the leading slash inside the tag**:
+    * Correct: `[IMAGE:kaartu.jpeg]` or `[IMAGE:gallery/canvas-1.jpeg]`
+    * Incorrect: `[IMAGE:/kaartu.jpeg]` (would produce `//kaartu.jpeg`)
+
+### 4.3 Media Usage per Section
+
+| Section | Supported Formats | Expected Dimensions / Aspect | Single or Multi-Image |
+| :--- | :--- | :--- | :--- |
+| **Series / Chapters** | `.jpeg`, `.jpg`, `.png` | Standard photography / scanned letters (e.g. `800x600`). Rendered inside text at `max-w-md` with `rounded-2xl shadow-sm`. | Multiple allowed throughout chapter via individual `[IMAGE:filename]` blocks. |
+| **Soul Notes** | `.jpeg`, `.jpg`, `.png` | Centered illustration (e.g. `mataji.jpeg`, `birthdayletter.jpeg`). | Multiple allowed via `[IMAGE:filename]` blocks. |
+| **Musings** | `.jpeg`, `.jpg`, `.png` | Inline story photo (e.g. `kaartu.jpeg`). | Multiple allowed via `[IMAGE:filename]` blocks. |
+| **Heartlines** | `.png`, `.jpeg` | 1. Artwork Poster: Max height `76vh`.<br>2. Wallpaper: `landscapeBg` (`1920x1080`+), `portraitBg` (`1080x1920`+). | Up to 1 poster image, OR 1 landscape + 1 portrait wallpaper pair. |
+| **Art Gallery** | `.jpeg`, `.jpg`, `.png` | High resolution artwork photos. Rendered at `width={1000} height={1000}` inside responsive masonry columns. | `src` is an array: supports 1 image or grouped images (e.g. 2 eyes or 2 butterflies). |
+
+---
+
+## 5. Verbatim Real Examples
+
+Below are exact verbatim excerpts from the codebase illustrating how each content type is currently defined.
+
+### 5.1 Series Chapter Entry (with Inline Image & Gratitude)
+*Source: [src/app/series/[slug]/[chapterSlug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/series/[slug]/[chapterSlug]/page.tsx#L1200-L1228)*
+
+```typescript
+      "epilogue": {
+        chapterLabel: "Epilogue",
+        title: "When Life Came Full Circle",
+        date: "July 6, 2025",
+        content: `Years later, life gave us a moment we could never have imagined.
+
+Twenty-one years ago, Dr. Diraviaraj had held a fragile newborn fighting for life in an incubator.
+Twenty-one years later, Nikhil, Ram, and I stood before him once again, with smiles, gratitude, and a heart full of emotions.
+
+He looked at Nikhil with quiet wonder, as if seeing not just a young man before him, but the miracle of a life that once hung by a thread.
+He held his hand with warmth, with the same hands that had once guided his delicate life back to safety.
+
+A cake was cut.
+Hands were joined.
+Eyes welled with tears of gratitude.
+
+[IMAGE:WA_1786207878858.jpg.jpeg]
+
+[CENTER]July 6, 2025 — Nikhil's 21st birthday
+*Twenty-one years ago, they met in a battle for life.*
+*Twenty-one years later, they met again, to celebrate it.*`,
+        gratitude: {
+          title: "Gratefully Remembered",
+          subtitle: "With heartfelt gratitude to:",
+          items: [
+            {
+              name: "Uncle Dr. Sri Ramachandran (Vishnu's father)",
+              role: "For always taking a genuine interest in Nikhil's journey and being happy to hear about every little progress in his life. And for making one of the most beautiful moments of our journey possible."
+            },
+            {
+              name: "Dr. Diraviaraj, Pediatric Surgeon",
+              role: "Devi Hospital, Coimbatore."
+            }
+          ]
+        }
+      }
+```
+
+---
+
+### 5.2 Soul Notes Entry (with Markdown Link & Inline Image)
+*Source: [src/app/soul-notes/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/soul-notes/[slug]/page.tsx#L69-L149)*
+
+```typescript
+  "the-mothers-silent-answer": {
+    title: "The Mother’s Silent Answer",
+    date: "October 18, 2025",
+    category: "Soul",
+    readTime: "3 min read",
+    content: [
+      "There is a belief often heard among devotees—that one reaches Tirumala Venkateswara Temple only when Venkateswara calls.",
+      "It is not a place one simply decides to visit.",
+      "It is a journey that unfolds when the divine wills it.",
+      "On the early morning of October 18, 2025, at around 4:30 a.m., Ram and I stepped down from a bus into the sacred town of Tirupati. The night had been long and drenched in rain. The roads were wet, the air cool, and the sky still carried the silence of dawn. Yet, as our feet touched that soil, there was an unexpected freshness within us.",
+      "Without much delay, we went to the rest house to get ready.",
+      "As I stood before the mirror, adjusting myself for the day ahead, I noticed something unusual.",
+      "One of my earrings was missing.",
+      "It was just a small artificial stud—simple and insignificant in value. But what stirred me was not the loss itself. It was a thought.",
+      "The previous day, while wearing that very earring, a quiet question had crossed my mind:",
+      "Will this fall off?",
+      "It had come uninvited and left just as quickly. I had dismissed it, trusting that the stud was secure. I hadn’t even considered carrying a spare.",
+      "And now, it was gone.",
+      "For a brief moment, I wondered if I should search for it. But something within me remained calm. There was no urgency, no disappointment.",
+      "Instead, a gentle acceptance arose.",
+      "Perhaps there is a reason for this.",
+      "We were traveling with a group, and soon the day began to unfold. After visiting the sacred Srikalahasteeswara Temple, we walked through the bustling streets nearby. Shops lined both sides, filled with colorful items—bags, toys, glass bangles, snacks, and souvenirs.",
+      "Somewhere in my mind, I thought I might find a simple pair of earrings.",
+      "But none appeared.",
+      "Shop after shop, there were many things—but not what I was looking for.",
+      "Slowly, the thought dissolved.",
+      "It doesn’t matter, I told myself.",
+      "And truly, it didn’t.",
+      "The day flowed with an ease that felt almost guided. Though it had begun with a light drizzle, the rain never disturbed us. The crowds were large, yet everything felt smooth. There was no discomfort, no rush—only a quiet sense of being carried through each moment.",
+      "By evening, we went to seek the blessings of the Divine Mother at Padmavathi Ammavari Temple, the abode of Padmavathi.",
+      "Earlier that day, I had read about the temple and felt a deep eagerness to witness Her divine form.",
+      "As we stood in the queue, surrounded by devotees, moving slowly toward the sanctum, a familiar thought returned.",
+      "My earring.",
+      "Quietly, within my heart, I spoke to Her.",
+      "Mother, why did that thought come to me yesterday? Why did I lose it?",
+      "And then, almost playfully, another thought arose—",
+      "Will I find an earring before I leave this place?",
+      "But the moment I entered the sanctum and saw Her, everything else disappeared.",
+      "She stood there—radiant, graceful, and infinitely compassionate.",
+      "In that instant, the mind fell silent.",
+      "Tears welled up in my eyes as I folded my hands. There was no prayer, no request—only a deep, overwhelming presence.",
+      "A connection beyond words.",
+      "When we stepped out, Ram gently reminded me,",
+      "“Let’s check if you find earrings in the shops here.”",
+      "I walked to a few nearby shops. They displayed bangles, chains, and various ornaments—but no earrings.",
+      "I was ready to leave.",
+      "But Ram insisted once more, pointing to a small shop at the back.",
+      "With no expectation, I walked toward it.",
+      "Inside, only a few earrings were hanging on the wall—mostly large jhumkas. I asked if they had something smaller.",
+      "The shopkeeper shook his head.",
+      "“These are the only ones.”",
+      "Among them, my eyes rested on the smallest pair.",
+      "Without hesitation, I chose it.",
+      "I didn’t even ask for it to be packed. Holding it gently in my palm, I stepped out of the shop.",
+      "And then, something made me pause.",
+      "I turned back.",
+      "My eyes moved toward the temple entrance… and then upward, to the tall gopuram rising into the evening sky.",
+      "In that quiet moment, my heart overflowed.",
+      "With eyes filled with gratitude, I silently thanked the unseen divine presence that had guided me through the day.",
+      "We hurried toward the parking area to board our bus.",
+      "Once seated, I opened my palm again to look at the earrings.",
+      "They were attached to a small card—a simple detail, easily overlooked.",
+      "But when my eyes fell upon the name printed on it, time seemed to pause.",
+      "It read:",
+      "“Mataji.”",
+      "[IMAGE:mataji.jpeg]",
+      "In that instant, something deep within me stirred.",
+      "There were no words, no thoughts—only a knowing.",
+      "A gentle, silent assurance.",
+      "To me, it meant everything.",
+      "It felt as though the Divine Mother had heard my unspoken question… and answered it in Her own quiet way.",
+      "And somewhere within, I felt that She had chosen those earrings for me—",
+      "So that the next day, when I stood before Venkateswara, I would stand adorned not just with ornaments…",
+      "But with Her grace.",
+      "For sometimes, the divine does not reveal itself through grand miracles.",
+      "Sometimes, it speaks through the smallest things—",
+      "Even through a missing earring.",
+      "For in losing something so small,",
+      "I was given something far greater—",
+      "a silent assurance that the Mother was always listening. 🌸"
+    ]
+  }
+```
+
+---
+
+### 5.3 Heartlines Poem Entries (Standard Text & Background Wallpaper)
+*Source: [src/app/musings/heartlines/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/musings/heartlines/[slug]/page.tsx#L12-L19)*
+
+#### Example A: Background Wallpaper Layout ("Feeling Rooted")
+```typescript
+    "feeling-rooted": {
+      title: "Feeling Rooted",
+      date: "June 30, 2026",
+      content: "Living miles away,\na place lingers within.\n\nJust the very thought of it\nfills my heart with a quiet peace.\n\nThe freshness in the air.\nThe fragrance of the wet soil.\nThe endless stretch of green fields.\nThe gentle chime of the temple bells.\nThe wide-spreading branches\nof that old mango tree.\nI feel rooted there.\n\nThe cheerful chirping of birds.\nThe squirrels darting from branch to branch.\nThe moos from the cowshed.\nThe rhythmic creak of the pulley\ndrawing water from the well.\nThe sound of that blowpipe\nfiring the wood.\nI feel rooted there.\n\nThe two storey tiled ancestral house\nThe wall lined with old photographs\nThe piled up newspapers\nThe rays of light through the windows\nFills the little rooms\nThe diya lighting the idol in the shelf\nThe long verandas and the polished floor.\nI feel rooted there.\n\nMy soul finds its way back\nThe breeze whispers...\n“You belong here.”",
+      image: "/chatgpt.png",
+      landscapeBg: "/landscape.png",
+      portraitBg: "/portrait.png"
+    }
+```
+
+#### Example B: Clean Text-Only Layout ("In the Quiet Corners of Your World")
+```typescript
+    "in-the-quiet-corners-of-your-world": {
+      title: "In the Quiet Corners of Your World",
+      date: "November 18, 2026",
+      content: "She wished to walk beside you,\nif only for a little while,\nfollowing the rhythm of your footsteps,\nadoring the path you chose,\nthough she knew\nyou walked at a different pace.\n\nShe could sense the rhythm of your days,\nread the silence between your words,\nnotice the unspoken in your gestures,\nrecognise the tremor in your voice,\nand feel the pain you never spoke of.\nYet, her heart quietly questioned\nwhether she had ever understood\nthe person behind it all.\n\nShe had a thousand little things to tell you,\nfragments of her day,\nthoughts that waited for your ears,\nmoments she wished to share.\nYet, she gathered her words,\noffering only a little,\nkeeping the rest quietly within.\nShe knew there were other things on\nthat needed your time.\n\nShe had hours to listen to your stories,\nbut was content with a few highlights,\nfinding joy even in those little glimpses.\nFor she knew\nthe value of your time.\n\nBecause you were her world.\n\nYour day became her day,\nyour words, her strength,\nyour touch, her healing,\nyour pain, her own,\nand your smile\nthe happiness she carried within.\n\nShe tried to keep things right for you,\neven when her own world\nwas falling out of place.\nYet, she knew\nyou were trying too,\nin your own little ways,\nto keep her happy.\n\nShe had desires\nthat never found their way into words,\nlittle dreams she quietly folded away,\nstanding beside you,\nknowing that you, too,\nhad set aside pieces of yourself\nfor the sake of the family.\n\nAnd perhaps,\nall she ever wished for\nwas not to change your pace,\nnor to hold you back,\nbut simply to walk beside you.\n\nTo be heard,\neven when she had little to say.\nTo be remembered,\neven in the busiest hours.\nTo feel that somewhere\nwithin the world you carried,\nthere was a little corner\nthat belonged to her.\n\nFor while you were living your day,\nshe was quietly making\na world out of yours."
+    }
+```
+
+---
+
+### 5.4 Gallery / Art Entries (Single and Multi-Image)
+*Source: [src/app/art/page.tsx](file:///d:/Profiles/blog-evd/src/app/art/page.tsx#L7-L26)*
+
+```typescript
+  const acrylicArt = [
+    { src: ["/gallery/canvas-1.jpeg"], caption: "My first acrylic painting - Lakeside in Bloom" },
+    { src: ["/gallery/swan.jpeg"], caption: "An elegant swan. Beauty in every ripple." },
+    { src: ["/gallery/kathakali-1.jpeg"], caption: "A face that speaks beyond words." }
+  ];
+
+  const pencilArt = [
+    { src: ["/gallery/face-portrait.jpeg"], caption: "Sketched in silence" },
+    // Multi-image item rendering side-by-side in grid
+    { src: ["/gallery/eye-1.jpeg", "/gallery/eye-2.jpeg"], caption: "Eyes speak louder than words." },
+    { src: ["/gallery/rose.jpeg", "/gallery/flower.jpeg"], caption: "Beauty with Thorns" }
+  ];
+```
+
+---
+
+## 6. Content Loader & Validation Code
+
+Because there are **no external content loader libraries**, the data retrieval and parsing functions are embedded directly inside each page file. The exact functions are documented below.
+
+### 6.1 Chapter Parser & Formatter (`renderFormattedText`)
+*File: [src/app/series/[slug]/[chapterSlug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/series/[slug]/[chapterSlug]/page.tsx#L1235-L1259)*
+
+```typescript
+const renderFormattedText = (text: string) => {
+  const parts = text.split(/(\*\*|\*)/g);
+  let isBold = false;
+  let isItalic = false;
+
+  return parts.map((part, index) => {
+    if (part === "**") {
+      isBold = !isBold;
+      return null;
+    }
+    if (part === "*") {
+      isItalic = !isItalic;
+      return null;
+    }
+
+    if (isBold && isItalic) {
+      return <strong key={index} className="font-semibold italic">{part}</strong>;
+    } else if (isBold) {
+      return <strong key={index} className="font-semibold">{part}</strong>;
+    } else if (isItalic) {
+      return <em key={index} className="italic text-charcoal font-normal">{part}</em>;
+    }
+    return part;
+  }).filter(Boolean);
+};
+```
+
+### 6.2 Chapter Inline Image & Paragraph Handler
+*File: [src/app/series/[slug]/[chapterSlug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/series/[slug]/[chapterSlug]/page.tsx#L1345-L1383)*
+
+```typescript
+          {/* Chapter Content */}
+          <div className="w-full text-charcoal/85">
+            {chapter.content.split('\n\n').map((paragraph: string, index: number) => {
+              if (paragraph.startsWith("[IMAGE:")) {
+                const src = paragraph.replace("[IMAGE:", "").replace("]", "");
+                return (
+                  <div key={index} className="w-full mt-8 mb-4 sm:mt-10 sm:mb-6 flex justify-center reveal-on-scroll relative" style={{ transitionDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
+                    <Image
+                      src={`/${src}`}
+                      alt="Story illustration"
+                      width={800}
+                      height={600}
+                      className="rounded-2xl shadow-sm w-full max-w-md h-auto object-cover opacity-95 filter brightness-[0.95]"
+                    />
+                  </div>
+                );
+              }
+
+              // Some custom styling for short impact lines if needed
+              let cleanParagraph = paragraph;
+              let isCentered = false;
+              if (cleanParagraph.startsWith("[CENTER]")) {
+                isCentered = true;
+                cleanParagraph = cleanParagraph.replace("[CENTER]", "").trim();
+              }
+
+              const isShortImpact = cleanParagraph.length < 50 && cleanParagraph.includes('…');
+
+              return (
+                <p
+                  key={index}
+                  className={`mb-8 sm:mb-12 font-serif font-light text-[1.1rem] sm:text-[1.2rem] md:text-[1.3rem] leading-[2.1] sm:leading-[2.5] whitespace-pre-line tracking-wide reveal-on-scroll transition-all duration-700
+                    ${isCentered ? 'text-center' : 'text-left'}
+                    ${isShortImpact ? 'text-charcoal' : 'text-charcoal/90'}
+                  `}
+                  style={{ transitionDelay: `${Math.min(index * 0.05, 0.3)}s` }}
+                >
+                  {renderFormattedText(cleanParagraph)}
+                </p>
+              );
+            })}
+          </div>
+```
+
+### 6.3 Soul Notes Markdown Link & Dialogue Parser
+*File: [src/app/soul-notes/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/soul-notes/[slug]/page.tsx#L261-L332)*
+
+```typescript
+          {/* CONTENT */}
+          <div className="w-full text-charcoal/85">
+            {note.content.map((paragraph, index) => {
+              if (paragraph.startsWith("[IMAGE:")) {
+                const src = paragraph.replace("[IMAGE:", "").replace("]", "");
+                return (
+                  <div key={index} className="w-full my-12 sm:my-16 flex justify-center reveal-on-scroll relative" style={{ transitionDelay: `${Math.min(index * 0.03, 0.3)}s` }}>
+                    <Image 
+                      src={`/${src}`} 
+                      alt="Story illustration" 
+                      width={800}
+                      height={600}
+                      className="rounded-2xl shadow-sm w-full max-w-md h-auto object-cover opacity-95 filter brightness-[0.95]"
+                    />
+                  </div>
+                );
+              }
+
+              if (paragraph === "A Path I Chose, A Path Yet to Find") {
+                return (
+                  <div key={index} className="my-12 sm:my-16 text-center reveal-on-scroll" style={{ transitionDelay: `${Math.min(index * 0.03, 0.3)}s` }}>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <div className="h-px w-10 sm:w-16 bg-warm-taupe/40" />
+                      <span className="text-[10px] uppercase tracking-[0.25em] text-warm-taupe font-semibold">Reflection</span>
+                      <div className="h-px w-10 sm:w-16 bg-warm-taupe/40" />
+                    </div>
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl text-charcoal leading-snug">
+                      {paragraph}
+                    </h2>
+                  </div>
+                );
+              }
+
+              const isDialogue = paragraph.startsWith("“") || paragraph.startsWith("\"");
+              const isShortThought = paragraph === "Will this fall off?" || 
+                                     paragraph === "Perhaps there is a reason for this." ||
+                                     paragraph === "Mother, why did that thought come to me yesterday? Why did I lose it?" ||
+                                     paragraph === "Will I find an earring before I leave this place?" ||
+                                     paragraph === "Perhaps this, too, is part of the journey." ||
+                                     paragraph === "Perhaps the path I chose was not entirely the path I was meant to follow." ||
+                                     paragraph === "Yet, I often strayed because I failed to heed those signs." ||
+                                     paragraph === "And here I stand...still, alone, and searching for my way, yet to find the path that feels truly mine.";
+                                     
+              const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+              const hasLink = linkRegex.test(paragraph);
+
+              let content: ReactNode = paragraph;
+              if (hasLink) {
+                const elements: ReactNode[] = [];
+                let lastIndex = 0;
+                let match;
+                linkRegex.lastIndex = 0;
+                while ((match = linkRegex.exec(paragraph)) !== null) {
+                  elements.push(paragraph.substring(lastIndex, match.index));
+                  elements.push(<Link key={match.index} href={match[2]} className="text-warm-taupe hover:text-charcoal underline transition-colors">{match[1]}</Link>);
+                  lastIndex = linkRegex.lastIndex;
+                }
+                elements.push(paragraph.substring(lastIndex));
+                content = elements;
+              }
+
+              return (
+                <p 
+                  key={index} 
+                  className={`mb-6 sm:mb-8 md:mb-10 text-[1.1rem] sm:text-[1.2rem] md:text-[1.3rem] leading-[2] sm:leading-[2.2] font-light reveal-on-scroll transition-all duration-700
+                    ${isDialogue ? 'italic ml-4 sm:ml-8 border-l border-warm-taupe/30 pl-4 sm:pl-6 text-charcoal/90' : ''}
+                    ${isShortThought ? 'italic text-charcoal/90 text-center' : ''}
+                  `}
+                  style={{ transitionDelay: `${Math.min(index * 0.03, 0.3)}s` }}
+                >
+                  {content}
+                </p>
+              );
+            })}
+          </div>
+```
+
+### 6.4 Heartlines Poem Parser (`renderPoemContent`)
+*File: [src/app/musings/heartlines/[slug]/page.tsx](file:///d:/Profiles/blog-evd/src/app/musings/heartlines/[slug]/page.tsx#L40-L83)*
+
+```typescript
+const renderPoemContent = (content: string) => {
+  return content.split("\n").map((line, index) => {
+    const trimmed = line.trim();
+    
+    // Highlight recurring lines in golden-serif italic
+    if (trimmed === "I feel rooted there.") {
+      return (
+        <span 
+          key={index} 
+          className="block text-[#E1BB5E] font-serif italic font-medium tracking-wide my-4 py-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          {line}
+        </span>
+      );
+    }
+    
+    // Highlight signature quote in golden font-alex
+    if (trimmed === "“You belong here.”" || trimmed === '"You belong here."' || trimmed === "You belong here.") {
+      return (
+        <span 
+          key={index} 
+          className="block text-[#E1BB5E] font-alex text-4xl sm:text-5xl md:text-6xl mt-8 mb-4 not-italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          {line}
+        </span>
+      );
+    }
+    
+    // Spacers for paragraph breaks
+    if (trimmed === "") {
+      return <span key={index} className="block h-6" />;
+    }
+    
+    // Default body lines styled in off-white with text shadow
+    return (
+      <span 
+        key={index} 
+        className="block text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] font-light leading-relaxed my-1.5"
+      >
+        {line}
+      </span>
+    );
+  });
+};
+```
+
+---
+
+## 7. Build & Deployment Guardrails & "Blog Desk" Transition Blueprint
+
+### 7.1 Vercel Build & Runtime Gotchas
+
+1. **Strict TypeScript Compilation (`tsconfig.json: "strict": true`):**
+   * Next.js production builds execute `tsc --noEmit`. If a `.tsx` file has a syntax error, unclosed bracket, missing quote, or invalid property, **the build terminates immediately with exit code 1**.
+2. **Next.js 16 Route Params Resolution:**
+   * In Next.js 16 App Router, dynamic route params can be provided as a `Promise` in Server Components. The pages in this app circumvent this by using `"use client"` and calling `useParams()` from `next/navigation` (or resolving with `Promise.resolve(props.params)` in `heartlines/[slug]`).
+3. **Google Fonts Build Network Dependency:**
+   * `next/font/google` (`Lora` and `Alex_Brush` in `src/app/layout.tsx`) requires outbound internet connectivity during `next build` to download font binaries. On Vercel this succeeds normally, but in restricted sandbox or offline CI environments, the build will fail unless fonts are cached.
+4. **Next.js Image Asset Resolution:**
+   * Next.js `<Image />` requires valid `src` strings starting with `/`. If an image referenced in `[IMAGE:foo.jpeg]` is not committed to `public/foo.jpeg`, the runtime will return a 404 image broken state.
+5. **Hardcoded Next/Prev Navigation in Series Chapters:**
+   * In `src/app/series/[slug]/[chapterSlug]/page.tsx`, previous/next chapter links are implemented with an explicit ternary chain (`slugs.chapterSlug === "chapter-1" ? ... : slugs.chapterSlug === "chapter-2" ? ...`). Adding a "Chapter 13" will render **no Next or Previous buttons** unless that file's JSX is manually updated.
+
+---
+
+### 7.2 The Architecture Gap: How "My Blog Desk" Must Operate
+
+The companion app envisions **"committing content files only (Markdown/MDX/JSON/images) via the GitHub API without touching site code"**.
+
+To make this possible, you have two clear implementation paths:
+
+#### Option A: Introduce a File-Based Content Layer to the Website (Recommended)
+Before "My Blog Desk" goes live, perform a one-time refactor of the repository:
+1. Create a root `content/` folder:
+   * `content/soul-notes/<slug>.json` (or `.md` with frontmatter)
+   * `content/musings/<slug>.json`
+   * `content/heartlines/<slug>.json`
+   * `content/series/<seriesSlug>/<chapterSlug>.json`
+   * `content/gallery.json`
+2. Replace hardcoded arrays in `src/app/` with standard Node.js `fs.readdirSync` / `fs.readFileSync` calls (converting routes to Next.js Server Components with `generateStaticParams()`).
+3. After this refactor, "My Blog Desk" only ever needs to POST a single `.json` or `.md` file to `content/...` and upload images to `public/...`. Vercel will auto-deploy smoothly.
+
+#### Option B: If the Website Must Remain Untouched Today (Headless Git Committer)
+If the website code cannot be refactored first, the "My Blog Desk" backend or client **must act as an AST / File Rewriter** using the GitHub Contents API:
+1. Fetch the target file (e.g. `src/app/soul-notes/page.tsx` and `src/app/soul-notes/[slug]/page.tsx`).
+2. Parse the TypeScript AST or inject the new object into the exported array/dictionary.
+3. Commit the modified `.tsx` file back to GitHub.
+*(Note: Option B is significantly more fragile than Option A, as any syntax typo will fail the Vercel build).*
+
+---
+
+### 7.3 Canonical Target Schemas for File-Based Publishing (When Ready)
+
+When transitioning to standalone content files, the companion app should emit the following standardized JSON structures:
+
+#### `content/soul-notes/<slug>.json`
+```json
+{
+  "title": "A Reflection on the Paths We Take",
+  "slug": "a-reflection-on-the-paths-we-take",
+  "date": "October 27, 2026",
+  "category": "Soul",
+  "readTime": "3 min read",
+  "snippet": "Observing different journeys, each unique in its choices...",
+  "content": [
+    "Paragraph 1 text...",
+    "[IMAGE:illustration.jpeg]",
+    "Paragraph 2 text..."
+  ]
+}
+```
+
+#### `content/musings/heartlines/<slug>.json`
+```json
+{
+  "title": "In the Quiet Corners of Your World",
+  "slug": "in-the-quiet-corners-of-your-world",
+  "date": "November 18, 2026",
+  "snippet": "She wished to walk beside you,\nif only for a little while...",
+  "content": "She wished to walk beside you,\nif only for a little while,\nfollowing the rhythm of your footsteps,\nadoring the path you chose,\nthough she knew\nyou walked at a different pace.\n\nShe could sense the rhythm of your days...",
+  "image": null,
+  "landscapeBg": null,
+  "portraitBg": null
+}
+```
+
+#### `content/gallery.json`
+```json
+{
+  "acrylicArt": [
+    {
+      "src": ["/gallery/canvas-1.jpeg"],
+      "caption": "My first acrylic painting - Lakeside in Bloom"
+    }
+  ],
+  "pencilArt": [
+    {
+      "src": ["/gallery/eye-1.jpeg", "/gallery/eye-2.jpeg"],
+      "caption": "Eyes speak louder than words."
+    }
+  ]
+}
+```
+
+---
+
+*Report prepared by Antigravity codebase analysis for the "My Blog Desk" development initiative.*

@@ -1,0 +1,94 @@
+<resources>
+    <string name="app_name">My Blog Desk</string>
+
+    <!-- Lock screen -->
+    <string name="pin_create_title">Choose Your 4-Digit PIN</string>
+    <string name="pin_create_subtitle">Pick 4 numbers that are easy for you to remember.</string>
+    <string name="pin_confirm_title">Enter Your PIN Again</string>
+    <string name="pin_confirm_subtitle">Type the same 4 numbers one more time to confirm.</string>
+    <string name="pin_unlock_title">Welcome Back</string>
+    <string name="pin_unlock_subtitle">Enter your 4-digit PIN to open your blog desk.</string>
+    <string name="pin_mismatch_error">Those PINs did not match. Please try again.</string>
+    <string name="pin_wrong_error">That PIN is not right. Please try again.</string>
+    <string name="pin_backspace_desc">Delete last digit</string>
+    <string name="pin_clear_label">Clear</string>
+
+    <!-- Home screen -->
+    <string name="home_new_post">New Post</string>
+    <string name="home_refresh_desc">Refresh posts</string>
+    <string name="home_lock_desc">Lock app</string>
+    <string name="home_badge_published">Published</string>
+    <string name="home_badge_draft">Draft</string>
+    <string name="home_empty_title">Your writing desk is ready</string>
+    <string name="home_empty_subtitle">Tap \"New Post\" below to write your first story.</string>
+    <string name="home_setup_needed_title">Almost ready to write</string>
+    <string name="home_setup_needed_body">Ask your family member to press and hold \"My Blog Desk\" at the top to connect your website.</string>
+    <string name="home_resume_draft_title">Unfinished writing saved</string>
+    <string name="home_resume_draft_action">Continue Writing</string>
+    <string name="home_loading_posts">Opening your posts…</string>
+    <string name="home_photo_attached_desc">Photo included</string>
+
+    <!-- Editor screen -->
+    <string name="editor_new_title">New Post</string>
+    <string name="editor_edit_title">Edit Post</string>
+    <string name="editor_back_desc">Go back</string>
+    <string name="editor_preview">Preview</string>
+    <string name="editor_title_label">Title</string>
+    <string name="editor_title_placeholder">Give your post a title…</string>
+    <string name="editor_date_label">Date</string>
+    <string name="editor_change_date">Change</string>
+    <string name="editor_photo_label">Photo (optional)</string>
+    <string name="editor_add_photo">Add Photo</string>
+    <string name="editor_take_photo">Take Photo</string>
+    <string name="editor_choose_gallery">Choose from Gallery</string>
+    <string name="editor_remove_photo">Remove Photo</string>
+    <string name="editor_body_label">Your Story</string>
+    <string name="editor_body_placeholder">Start writing here…</string>
+    <string name="editor_save_draft">Save Draft</string>
+    <string name="editor_publish">Publish</string>
+    <string name="editor_delete_post">Remove This Post</string>
+    <string name="editor_autosaved">Saved on this phone</string>
+    <string name="editor_title_required">Please write a title first.</string>
+    <string name="editor_body_required">Please write something in your post before publishing.</string>
+    <string name="editor_confirm_publish_title">Ready to publish?</string>
+    <string name="editor_confirm_publish_body">\"%1$s\" will be added to your website so everyone can read it.</string>
+    <string name="editor_confirm_publish_yes">Yes, Publish</string>
+    <string name="editor_confirm_cancel">Not yet</string>
+    <string name="editor_confirm_delete_title">Remove this post?</string>
+    <string name="editor_confirm_delete_body">\"%1$s\" will be removed from your website. Are you sure?</string>
+    <string name="editor_confirm_delete_yes">Yes, Remove</string>
+    <string name="editor_confirm_delete_keep">Keep Post</string>
+    <string name="editor_draft_saved_toast">Draft saved safely.</string>
+    <string name="editor_deleted_toast">Post removed from your website.</string>
+
+    <!-- Preview screen -->
+    <string name="preview_screen_title">Preview</string>
+    <string name="preview_back">Back to Edit</string>
+    <string name="preview_publish">Publish</string>
+    <string name="preview_untitled">Untitled Post</string>
+    <string name="preview_note">This is roughly how your post will appear on your website.</string>
+
+    <!-- Success screen -->
+    <string name="success_title">Published!</string>
+    <string name="success_subtitle">It will be live in about a minute.</string>
+    <string name="success_open_site">Open Website</string>
+    <string name="success_back_home">Back to My Posts</string>
+
+    <!-- Setup screen (for family member / maintainer) -->
+    <string name="setup_title">Website Setup</string>
+    <string name="setup_subtitle">For site maintainer only. Saved on this phone only.</string>
+    <string name="setup_security_notice">Use a fine-grained GitHub token limited to this single repository with only \"Contents: Read and write\" permission.</string>
+    <string name="setup_token_label">GitHub Token</string>
+    <string name="setup_token_saved_hint">Token saved (masked for safety)</string>
+    <string name="setup_token_replace">Replace Token</string>
+    <string name="setup_owner_label">GitHub Owner</string>
+    <string name="setup_repo_label">Repository Name</string>
+    <string name="setup_branch_label">Branch</string>
+    <string name="setup_posts_path_label">Posts Folder</string>
+    <string name="setup_images_path_label">Images Folder</string>
+    <string name="setup_site_url_label">Live Website URL</string>
+    <string name="setup_test_connection">Test Connection</string>
+    <string name="setup_save">Save Setup</string>
+    <string name="setup_reset_pin">Change 4-Digit PIN</string>
+    <string name="setup_saved_toast">Setup saved on this phone.</string>
+</resources>

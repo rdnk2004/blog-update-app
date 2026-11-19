@@ -1,0 +1,6 @@
+{
+  "name": "My Blog Desk",
+  "description": "A calm, warm writing desk for publishing blog posts and photos directly to GitHub.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
